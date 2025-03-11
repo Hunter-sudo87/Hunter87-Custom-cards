@@ -1,0 +1,93 @@
+--Toon Palladium Oracle Mana
+local s,id=GetID()
+function s.initial_effect(c)
+	--special summon
+	local e1=Effect.CreateEffect(c)
+	e1:SetDescription(aux.Stringid(id,0))
+	e1:SetCategory(CATEGORY_SPECIAL_SUMMON)
+	e1:SetType(EFFECT_TYPE_QUICK_O)
+	e1:SetRange(LOCATION_HAND+LOCATION_GRAVE)
+	e1:SetCode(EVENT_CHAINING)
+	e1:SetCountLimit(1,id)
+	e1:SetCondition(s.spcon)
+	e1:SetTarget(s.sptg)
+	e1:SetOperation(s.spop)
+	c:RegisterEffect(e1)
+	--indes
+	local e2=Effect.CreateEffect(c)
+	e2:SetType(EFFECT_TYPE_FIELD)
+	e2:SetCode(EFFECT_INDESTRUCTABLE_EFFECT)
+	e2:SetRange(LOCATION_MZONE)
+	e2:SetTargetRange(LOCATION_MZONE,0)
+	e2:SetTarget(s.efilter)
+	e2:SetValue(1)
+	c:RegisterEffect(e2)
+	--special summon
+	local e3=Effect.CreateEffect(c)
+	e3:SetDescription(aux.Stringid(id,1))
+	e3:SetCategory(CATEGORY_SPECIAL_SUMMON)
+	e3:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_O)
+	e3:SetProperty(EFFECT_FLAG_DELAY)
+	e3:SetCode(EVENT_DESTROYED)
+	e3:SetCondition(s.spcon2)
+	e3:SetTarget(s.sptg2)
+	e3:SetOperation(s.spop2)
+	c:RegisterEffect(e3)
+	--Direct attack
+	local e4=Effect.CreateEffect(c)
+	e4:SetType(EFFECT_TYPE_SINGLE)
+	e4:SetCode(EFFECT_DIRECT_ATTACK)
+	e4:SetCondition(s.dircon)
+	c:RegisterEffect(e4)
+end
+s.listed_names={90960358,15259703}
+function s.spcon(e,tp,eg,ep,ev,re,r,rp)
+	if rp==tp or not re:IsHasProperty(EFFECT_FLAG_CARD_TARGET) then return false end
+	local tg=Duel.GetChainInfo(ev,CHAININFO_TARGET_CARDS)
+	if not tg then return false end
+	local tc=tg:GetFirst()
+	return #tg==1 and tc:IsLocation(LOCATION_MZONE) and tc:IsType(TYPE_TOON) and tc:IsFaceup() and tc:IsControler(tp)
+end
+function s.sptg(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.GetLocationCount(tp,LOCATION_MZONE)>0
+		and e:GetHandler():IsCanBeSpecialSummoned(e,0,tp,false,false) end
+	Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,e:GetHandler(),1,0,0)
+end
+function s.spop(e,tp,eg,ep,ev,re,r,rp)
+	local c=e:GetHandler()
+	if not c:IsRelateToEffect(e) then return end
+	Duel.SpecialSummon(c,0,tp,tp,false,false,POS_FACEUP)
+end
+function s.efilter(e,c)
+	return c:IsType(TYPE_TOON) and c:IsLevelAbove(7)
+end
+function s.spcon2(e,tp,eg,ep,ev,re,r,rp)
+	return (r&REASON_EFFECT+REASON_BATTLE)~=0
+end
+function s.spfilter(c,e,tp)
+	return c:IsCode(90960358) and c:IsCanBeSpecialSummoned(e,0,tp,true,true)
+end
+function s.sptg2(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.GetLocationCount(tp,LOCATION_MZONE)>0
+		and Duel.IsExistingMatchingCard(s.spfilter,tp,LOCATION_HAND+LOCATION_DECK+LOCATION_GRAVE,0,1,nil,e,tp) end
+	Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,nil,1,tp,LOCATION_HAND+LOCATION_DECK+LOCATION_GRAVE)
+end
+function s.spop2(e,tp,eg,ep,ev,re,r,rp)
+	if Duel.GetLocationCount(tp,LOCATION_MZONE)<=0 then return end
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_SPSUMMON)
+	local g=Duel.SelectMatchingCard(tp,aux.NecroValleyFilter(s.spfilter),tp,LOCATION_HAND+LOCATION_DECK+LOCATION_GRAVE,0,1,1,nil,e,tp)
+	if #g>0 then
+		Duel.SpecialSummon(g,0,tp,tp,true,true,POS_FACEUP)
+	end
+end
+function s.cfilter1(c)
+	return c:IsFaceup() and c:IsCode(15259703)
+end
+function s.cfilter2(c)
+	return c:IsFaceup() and c:IsType(TYPE_TOON)
+end
+function s.dircon(e)
+	local tp=e:GetHandlerPlayer()
+	return Duel.IsExistingMatchingCard(s.cfilter1,tp,LOCATION_ONFIELD,0,1,nil)
+		and not Duel.IsExistingMatchingCard(s.cfilter2,tp,0,LOCATION_MZONE,1,nil)
+end
